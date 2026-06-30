@@ -6,16 +6,21 @@
 <meta name="theme-color" content="#15803d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>World Cup Predictor 2026</title>
+<title>Ivory's WC2026 Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --green:#15803d; --green-dark:#166534; --green-light:#dcfce7; --green-soft:#f0fdf4;
-  --gold:#f4c430; --gold-dark:#d4a017;
-  --red:#e74c3c; --red-soft:#fdecea;
-  --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
-  --card:#ffffff; --bg1:#f0fdf4; --bg2:#e0f2fe;
-  --shadow:0 4px 14px rgba(16,24,40,.08); --shadow-lg:0 10px 30px rgba(16,24,40,.12);
-  --radius:16px;
+  --green:#16a34a; --green-dark:#15803d; --green-light:#dcfce7; --green-soft:#f0fdf4;
+  --gold:#fbbf24; --gold-dark:#f59e0b;
+  --teal:#14b8a6; --sky:#0ea5e9; --grape:#7c3aed; --coral:#fb7185;
+  --red:#ef4444; --red-soft:#fee2e2;
+  --ink:#1e293b; --muted:#64748b; --line:#e7e9ee;
+  --card:#ffffff;
+  --shadow:0 6px 18px rgba(30,41,59,.10); --shadow-lg:0 18px 44px rgba(30,41,59,.20);
+  --radius:18px;
+  --brand:"Fredoka",system-ui,-apple-system,sans-serif;
   --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -23,59 +28,70 @@ html,body{height:100%}
 body{
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color:var(--ink);
-  background:linear-gradient(160deg,var(--bg1),var(--bg2));
+  background:linear-gradient(165deg,#ecfdf5 0%,#eff6ff 48%,#faf5ff 100%);
   background-attachment:fixed;
   overscroll-behavior-y:none;
   -webkit-overflow-scrolling:touch;
   font-size:clamp(14px,3.6vw,16px);
 }
+/* playful colored glows behind everything */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(124,58,237,.16), transparent 38%),
+    radial-gradient(circle at 88% 10%, rgba(14,165,233,.18), transparent 40%),
+    radial-gradient(circle at 82% 88%, rgba(251,191,36,.22), transparent 42%),
+    radial-gradient(circle at 16% 86%, rgba(20,184,166,.16), transparent 42%);}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 .hidden{display:none!important}
 
 /* ---------- Splash ---------- */
 #splash{
   position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:8px;
-  background:linear-gradient(160deg,#15803d,#0e5a2b);
+  align-items:center;justify-content:center;gap:6px;overflow:hidden;
+  background:linear-gradient(160deg,#16a34a 0%,#0ea5e9 62%,#7c3aed 100%);
   transition:opacity .6s ease,visibility .6s ease;
 }
 #splash.gone{opacity:0;visibility:hidden}
-.ball{font-size:clamp(72px,22vw,120px);animation:bounce .7s ease-in-out infinite;filter:drop-shadow(0 12px 10px rgba(0,0,0,.25))}
-.splash-title{color:#fff;font-size:clamp(26px,7vw,44px);font-weight:800;letter-spacing:-.5px;text-align:center}
-.splash-sub{color:var(--gold);font-weight:700;letter-spacing:3px;font-size:clamp(11px,3.4vw,15px)}
-@keyframes bounce{0%,100%{transform:translateY(0) scaleX(1)}50%{transform:translateY(-42px) scaleX(.96)}}
+.ball{font-size:clamp(76px,22vw,124px);animation:bounce .7s ease-in-out infinite;filter:drop-shadow(0 14px 12px rgba(0,0,0,.28));z-index:2}
+.splash-title{font-family:var(--brand);color:#fff;font-size:clamp(30px,8.5vw,54px);font-weight:700;letter-spacing:-.5px;text-align:center;z-index:2;text-shadow:0 4px 14px rgba(0,0,0,.22)}
+.splash-sub{color:var(--gold);font-weight:600;letter-spacing:4px;font-size:clamp(11px,3.4vw,15px);z-index:2}
+@keyframes bounce{0%,100%{transform:translateY(0) scaleX(1)}50%{transform:translateY(-44px) scaleX(.95)}}
+/* confetti */
+.confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+.confetti i{position:absolute;top:-12vh;width:11px;height:15px;border-radius:2px;opacity:.92;animation:fall linear infinite}
+@keyframes fall{0%{transform:translateY(-12vh) rotate(0);opacity:0}10%{opacity:.95}100%{transform:translateY(115vh) rotate(900deg);opacity:.95}}
 
 /* ---------- Auth ---------- */
-#auth{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;padding:24px;
-  background:linear-gradient(160deg,var(--bg1),var(--bg2))}
+#auth{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;padding:22px;overflow:hidden;
+  background:linear-gradient(160deg,#16a34a 0%,#0ea5e9 62%,#7c3aed 100%)}
 #auth.show{display:flex}
-.auth-card{background:var(--card);border-radius:24px;box-shadow:var(--shadow-lg);
-  padding:36px 26px;max-width:380px;width:100%;text-align:center;animation:rise .5s ease}
-.auth-emoji{font-size:54px;margin-bottom:6px}
-.auth-card h1{font-size:24px;font-weight:800;color:var(--green-dark)}
-.auth-card p{color:var(--muted);font-size:14px;margin:6px 0 22px}
-#gbtn{display:flex;justify-content:center;margin-bottom:14px;min-height:44px}
-.divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:14px 0}
-.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
-.auth-input{width:100%;padding:13px 15px;border:2px solid var(--line);border-radius:12px;font-size:15px;transition:border-color .2s}
-.auth-input:focus{outline:none;border-color:var(--green)}
-.btn{width:100%;padding:14px;border-radius:12px;font-size:16px;font-weight:700;min-height:48px;transition:transform .1s,background .2s}
+.auth-card{background:var(--card);border-radius:26px;box-shadow:var(--shadow-lg);max-width:380px;width:100%;
+  overflow:hidden;animation:rise .5s ease;position:relative;z-index:2}
+.auth-top{background:linear-gradient(135deg,var(--green),var(--teal) 55%,var(--sky));color:#fff;
+  padding:30px 24px 24px;text-align:center}
+.auth-ball{font-size:60px;animation:bounce 1s ease-in-out infinite;filter:drop-shadow(0 8px 8px rgba(0,0,0,.22))}
+.auth-brand{font-family:var(--brand);font-size:30px;font-weight:700;line-height:1.05;margin-top:2px}
+.auth-tag{font-size:10px;letter-spacing:2.5px;font-weight:600;color:rgba(255,255,255,.9);margin-top:7px}
+.auth-body{padding:24px 24px 26px;text-align:center}
+.auth-body p{color:var(--ink);font-size:14px;font-weight:600;margin-bottom:18px;line-height:1.5}
+#gbtn{display:flex;justify-content:center;min-height:44px}
+.btn{width:100%;padding:14px;border-radius:14px;font-size:16px;font-weight:700;min-height:48px;transition:transform .1s,filter .2s}
 .btn:active{transform:scale(.97)}
-.btn-primary{background:var(--green);color:#fff}
-.btn-primary:active{background:var(--green-dark)}
-.auth-err{color:var(--red);font-size:13px;margin-top:10px;min-height:16px}
+.btn-primary{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;box-shadow:0 8px 18px rgba(16,163,74,.32)}
+.btn-primary:active{filter:brightness(.95)}
+.auth-err{color:var(--red);font-size:13px;margin-top:12px;min-height:16px;font-weight:600}
 .auth-note{color:var(--muted);font-size:11px;margin-top:16px;line-height:1.5}
 
 /* ---------- App shell ---------- */
 #app{display:none;flex-direction:column;height:100%}
 #app.show{display:flex}
-.header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);padding:calc(10px + var(--safe-top)) 16px 10px;
+.header{position:sticky;top:0;z-index:50;background:linear-gradient(120deg,#16a34a,#0d9488 70%,#0ea5e9);
+  padding:calc(10px + var(--safe-top)) 16px 11px;box-shadow:0 4px 16px rgba(16,163,74,.28);
   display:flex;align-items:center;justify-content:space-between;gap:10px}
-.header h1{font-size:clamp(16px,4.6vw,20px);font-weight:800;color:var(--green-dark);display:flex;align-items:center;gap:7px}
-.header .who{font-size:11px;color:var(--muted);margin-top:2px}
-.logout{font-size:12px;color:var(--muted);font-weight:600;padding:8px;border-radius:8px}
-.logout:active{background:var(--line)}
+.header h1{font-family:var(--brand);font-size:clamp(18px,5vw,22px);font-weight:700;color:#fff;display:flex;align-items:center;gap:7px}
+.header .who{font-size:11px;color:rgba(255,255,255,.82);margin-top:2px}
+.logout{font-size:12px;color:#fff;font-weight:700;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.18)}
+.logout:active{background:rgba(255,255,255,.32)}
 
 .main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   padding-bottom:calc(74px + var(--safe-bottom))}
@@ -89,9 +105,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--line);
   padding-bottom:var(--safe-bottom)}
 .nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:9px 4px;color:var(--muted);font-size:11px;font-weight:600;min-height:56px;transition:color .2s}
-.nav button .ic{font-size:21px;line-height:1}
+  padding:9px 4px;color:var(--muted);font-size:11px;font-weight:700;min-height:56px;transition:color .2s;position:relative}
+.nav button .ic{font-size:21px;line-height:1;transition:transform .2s}
 .nav button.active{color:var(--green)}
+.nav button.active .ic{transform:translateY(-3px) scale(1.2)}
+.nav button.active::after{content:"";position:absolute;bottom:6px;width:18px;height:3px;border-radius:3px;background:var(--green)}
 .nav button.admin-tab{display:none}
 .nav button.admin-tab.show{display:flex}
 
@@ -106,8 +124,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .bracket-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 14px 14px}
 .bracket{display:flex;gap:14px;min-width:min-content}
 .round{display:flex;flex-direction:column;gap:12px;min-width:172px}
-.round-head{position:sticky;top:0;background:var(--green-light);color:var(--green-dark);
-  font-weight:800;font-size:12px;text-align:center;padding:8px;border-radius:10px}
+.round-head{position:sticky;top:0;background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;
+  font-family:var(--brand);font-weight:600;font-size:13px;text-align:center;padding:9px;border-radius:12px;
+  box-shadow:0 4px 10px rgba(16,163,74,.25)}
 .match{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px;
   position:relative;border:1.5px solid transparent;animation:rise .35s ease both}
 .match.locked{background:#fafafa}
@@ -214,6 +233,7 @@ td .flag{margin-right:6px}
 .m-foot.no{color:var(--red);background:var(--red-soft)}
 .m-foot.muted{color:var(--muted);background:#f2f3f5}
 .m-tag.muted{background:#eef0f2;color:var(--muted)}
+.m-tag.soon{background:#fef3c7;color:#b45309}
 /* loader */
 #loader{position:fixed;inset:0;z-index:400;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(240,253,244,.85);backdrop-filter:blur(4px)}
 #loader.show{display:flex}
@@ -238,20 +258,27 @@ td .flag{margin-right:6px}
 
 <!-- Splash -->
 <div id="splash">
+  <div class="confetti" id="confettiSplash"></div>
   <div class="ball">⚽</div>
-  <div class="splash-title">World Cup Predictor</div>
-  <div class="splash-sub">COMPANY CHALLENGE 2026</div>
+  <div class="splash-title">Ivory's WC2026</div>
+  <div class="splash-sub">⚽ PREDICTOR · COMPANY CHALLENGE ⚽</div>
 </div>
 
 <!-- Auth -->
 <div id="auth">
+  <div class="confetti" id="confettiAuth"></div>
   <div class="auth-card">
-    <div class="auth-emoji">⚽</div>
-    <h1>Welcome</h1>
-    <p>Sign in to make your predictions</p>
-    <div id="gbtn"></div>
-    <div class="auth-err" id="authErr"></div>
-    <div class="auth-note">Sign in with your <b>@liveivory.com</b> Google account. One account per person — you'll be known by your email.</div>
+    <div class="auth-top">
+      <div class="auth-ball">⚽</div>
+      <div class="auth-brand">Ivory's WC2026</div>
+      <div class="auth-tag">PREDICTOR · COMPANY CHALLENGE</div>
+    </div>
+    <div class="auth-body">
+      <p>Fill your bracket, beat your colleagues, lift the trophy 🏆</p>
+      <div id="gbtn"></div>
+      <div class="auth-err" id="authErr"></div>
+      <div class="auth-note">Sign in with your <b>@liveivory.com</b> Google account. One account per person.</div>
+    </div>
   </div>
 </div>
 
@@ -259,7 +286,7 @@ td .flag{margin-right:6px}
 <div id="app">
   <header class="header">
     <div>
-      <h1>⚽ World Cup 2026</h1>
+      <h1>⚽ Ivory's WC2026</h1>
       <div class="who" id="who"></div>
     </div>
     <button class="logout" id="logout" aria-label="Sign out">Sign out</button>
@@ -472,7 +499,14 @@ function showLoader(txt){ document.getElementById('loaderText').textContent=txt|
 function hideLoader(){ document.getElementById('loader').classList.remove('show'); }
 const fmtDate = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 const fmtTime = d => d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-function isLocked(m){ return (m.date - new Date())/3600000 < CONFIG.LOCK_HOURS; }
+function kickedOff(m){ return m.date <= new Date(); }                        // match has started
+function withinLock(m){ return (m.date - new Date())/3600000 < CONFIG.LOCK_HOURS; } // inside the 8h freeze window
+// You can place a NEW prediction right up to kickoff; the 8h lock only stops you CHANGING one.
+function isOpen(m){
+  if(RESULTS[m.id] || kickedOff(m) || !m.t1 || !m.t2) return false;
+  if(PICKS[m.id] && withinLock(m)) return false; // has a pick + inside freeze window = can't change
+  return true;
+}
 const prettyName = email => email.split('@')[0].replace(/[._-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
 
 /* =========================================================
@@ -489,18 +523,26 @@ function signIn(email){
   USER = { email, name: prettyName(email), isAdmin: email===CONFIG.ADMIN_EMAIL };
   setJSON(LS.session(), USER);
 
-  // register user (local + backend)
-  const users=getJSON(LS.users(),{}); users[email]=USER.name; setJSON(LS.users(),users);
-  if(backendOn()) api('register',{email,name:USER.name}).catch(()=>{});
-
+  // register as a player (admins are not players, so they stay off the leaderboard)
+  if(!USER.isAdmin){
+    const users=getJSON(LS.users(),{}); users[email]=USER.name; setJSON(LS.users(),users);
+    if(backendOn()) api('register',{email,name:USER.name}).catch(()=>{});
+  }
   enterApp();
+}
+
+function selectTab(tab){
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+tab));
 }
 
 function enterApp(){
   document.getElementById('auth').classList.remove('show');
   document.getElementById('app').classList.add('show');
   document.getElementById('who').textContent = `${USER.name} · ${USER.email}`;
-  if(USER.isAdmin) document.querySelector('.admin-tab').classList.add('show');
+  // toggle (not just add) so the admin tab never lingers for a normal user
+  document.querySelector('.admin-tab').classList.toggle('show', !!USER.isAdmin);
+  selectTab('bracket'); // always land on Predict
   loadEverything();
 }
 
@@ -509,6 +551,7 @@ document.getElementById('logout').onclick=()=>{
   document.getElementById('app').classList.remove('show');
   document.getElementById('auth').classList.add('show');
   document.querySelector('.admin-tab').classList.remove('show');
+  try{ google.accounts.id.disableAutoSelect(); }catch(e){} // don't silently re-login last account
 };
 
 /* Google one-click (only if CLIENT_ID set) */
@@ -585,10 +628,12 @@ function clearDownstream(matchId){
 function pick(matchId, team){
   const m=matchById(matchId);
   if(!team) return;
-  if(isLocked(m)){ toast('🔒 This match is locked'); return; }
+  if(RESULTS[m.id] || kickedOff(m)){ toast('⏱️ This match has already kicked off'); return; }
   const prev=PICKS[matchId];
+  if(prev===team) return;                                 // tapping the same pick = no-op
+  if(prev && withinLock(m)){ toast(`🔒 Locked — can't change within ${CONFIG.LOCK_HOURS}h of kickoff`); return; }
   PICKS[matchId]=team;
-  if(prev && prev!==team) clearDownstream(matchId); // upstream change wipes downstream
+  if(prev) clearDownstream(matchId);                      // changed a pick → wipe now-invalid downstream
   propagateAll();
   persistPicks();
   renderBracket(); renderStats();
@@ -610,12 +655,12 @@ function applyResultsToBracket(){ /* results only affect scoring + highlight, sl
 function renderBracket(){
   const host=document.getElementById('bracket'); host.innerHTML='';
   // edit banner
-  const editable=MATCHES.filter(m=>m.t1&&m.t2&&!isLocked(m));
+  const editable=MATCHES.filter(isOpen);
   const banner=document.getElementById('editBanner');
   if(editable.length){
     banner.style.display='flex';
     document.getElementById('editBannerText').textContent =
-      `${editable.length} match${editable.length>1?'es':''} still open. Predictions lock ${CONFIG.LOCK_HOURS}h before kickoff.`;
+      `${editable.length} match${editable.length>1?'es':''} open to predict. Picks can't be changed within ${CONFIG.LOCK_HOURS}h of kickoff.`;
   } else banner.style.display='none';
 
   ROUND_ORDER.forEach(rn=>{
@@ -634,13 +679,14 @@ function matchCard(m,i){
   const result=RESULTS[m.id]||null;
   const userPick=PICKS[m.id]||null;
   const done   = !!result;                                  // official result entered
-  const locked = isLocked(m);                               // within 8h / kicked off
-  const past   = !!(m.t1 && m.t2) && m.date < new Date();   // started but no result yet
-  const interactive = !done && !locked && m.t1 && m.t2;     // can still predict?
+  const kicked = kickedOff(m);                              // started, awaiting result
+  const frozen = !!userPick && withinLock(m) && !kicked;    // has a pick, can't change now
+  const closing= !userPick && withinLock(m) && !kicked && m.t1 && m.t2; // open but <8h
+  const interactive = isOpen(m);                            // can place/change a pick
 
   if(done){
     el.classList.add('done', userPick ? (userPick===result?'correct':'wrong') : 'noresult');
-  } else if(locked){ el.classList.add('locked'); }
+  } else if(kicked || frozen){ el.classList.add('locked'); }
 
   // status tag (top-right)
   let tag='';
@@ -650,9 +696,12 @@ function matchCard(m,i){
           ? `<span class="m-tag ok">✓ Correct +${ROUND_POINTS[m.roundKey]}</span>`
           : `<span class="m-tag no">✗ Wrong</span>`)
       : `<span class="m-tag muted">Finished</span>`;
-  } else if(locked){
-    tag = past ? `<span class="m-tag lock">⏳ In play</span>`
-               : `<span class="m-tag lock">🔒 Locked</span>`;
+  } else if(kicked){
+    tag = `<span class="m-tag lock">⏳ In play</span>`;
+  } else if(frozen){
+    tag = `<span class="m-tag lock">🔒 Pick locked</span>`;
+  } else if(closing){
+    tag = `<span class="m-tag soon">⏳ Closing soon</span>`;
   }
 
   el.innerHTML =
@@ -705,7 +754,7 @@ function scoreFor(picks){
 function renderStats(){
   const made = Object.keys(PICKS).length;
   const {correct} = scoreFor(PICKS);
-  const editable = MATCHES.filter(m=>m.t1&&m.t2&&!isLocked(m)).length;
+  const editable = MATCHES.filter(isOpen).length;
   const champ = PICKS[31] || null; // Final match id = 31
 
   document.getElementById('champion').innerHTML = champ
@@ -729,19 +778,22 @@ function renderStats(){
    LEADERBOARD
    ========================================================= */
 async function gatherStandings(){
-  // returns [{email,name,correct,points}]
+  // returns [{email,name,correct,points}]  — admins are excluded (not players)
+  let rows=null;
   if(backendOn()){
-    try{ const r=await api('leaderboard',{}); if(r&&r.rows) return r.rows; }catch(e){}
+    try{ const r=await api('leaderboard',{}); if(r&&r.rows) rows=r.rows; }catch(e){}
   }
-  // local fallback: everyone who played in this browser + seed demo if alone
-  const users=getJSON(LS.users(),{});
-  const all=getJSON(LS.allpicks(),{});
-  let rows=Object.keys(users).map(email=>{
-    const s=scoreFor(all[email]||{});
-    return {email,name:users[email],correct:s.correct,points:s.points};
-  });
-  if(rows.length<=1) rows = seedDemo(rows);
-  return rows;
+  if(!rows){
+    // local fallback: everyone who played in this browser + seed demo if alone
+    const users=getJSON(LS.users(),{});
+    const all=getJSON(LS.allpicks(),{});
+    rows=Object.keys(users).map(email=>{
+      const s=scoreFor(all[email]||{});
+      return {email,name:users[email],correct:s.correct,points:s.points};
+    });
+    if(rows.length<=1) rows = seedDemo(rows);
+  }
+  return rows.filter(r=>(r.email||'').toLowerCase()!==CONFIG.ADMIN_EMAIL.toLowerCase());
 }
 function seedDemo(rows){
   const demo=[
@@ -896,6 +948,23 @@ document.querySelectorAll('.nav button').forEach(b=>{
 /* =========================================================
    BOOT
    ========================================================= */
+function makeConfetti(el,n){
+  if(!el) return;
+  const colors=['#fbbf24','#0ea5e9','#fb7185','#16a34a','#7c3aed','#ffffff','#14b8a6'];
+  let h='';
+  for(let i=0;i<n;i++){
+    const c=colors[i%colors.length];
+    const left=Math.round(Math.random()*100);
+    const dur=(3+Math.random()*3).toFixed(2);
+    const delay=(Math.random()*5).toFixed(2);
+    const w=8+Math.round(Math.random()*6);
+    h+=`<i style="left:${left}%;width:${w}px;background:${c};animation-duration:${dur}s;animation-delay:-${delay}s"></i>`;
+  }
+  el.innerHTML=h;
+}
+makeConfetti(document.getElementById('confettiSplash'),16);
+makeConfetti(document.getElementById('confettiAuth'),18);
+
 initGoogle();
 setTimeout(()=>{
   document.getElementById('splash').classList.add('gone');
