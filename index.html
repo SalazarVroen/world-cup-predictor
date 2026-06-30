@@ -879,7 +879,15 @@ async function gatherStandings(){
   // returns [{email,name,correct,points}]  — admins are excluded (not players)
   let rows=null;
   if(backendOn()){
-    try{ const r=await api('leaderboard',{}); if(r&&r.rows) rows=r.rows; }catch(e){}
+    try{
+      const r=await api('leaderboard',{});
+      if(r&&r.rows) rows=r.rows;
+      // seed champion pick fallback — leaderboard now returns champPicks from the Predictions sheet
+      if(r&&r.champPicks){
+        const total=Object.values(r.champPicks).reduce((s,n)=>s+n,0);
+        if(total>0) MATCH_STATS['31']={picks:r.champPicks,total};
+      }
+    }catch(e){}
   }
   if(!rows){
     // local fallback: everyone who played in this browser + seed demo if alone
