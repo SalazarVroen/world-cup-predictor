@@ -121,10 +121,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .team{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;background:#f7f8fa;
   min-height:44px;transition:background .15s,box-shadow .15s;border:1.5px solid transparent}
 .team+.team{margin-top:6px}
-.team:active{background:var(--green-light)}
+.team:not(.static):active{background:var(--green-light)}
+.team.static{cursor:default}
 .team.picked{background:var(--green-light);border-color:var(--green)}
 .team.tbd{color:var(--muted);font-style:italic}
-.team .flag{font-size:20px;width:24px;text-align:center}
+.flag{width:28px;height:21px;object-fit:cover;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.1);display:inline-block;vertical-align:middle;flex:0 0 auto}
+.flag-x{width:28px;height:21px;font-size:9px;font-weight:800;color:var(--muted);background:#eef0f2;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;letter-spacing:.5px;flex:0 0 auto}
+.flag-lg{width:108px;height:80px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.22)}
+.flag-sm{width:44px;height:33px}
+.team .flag{margin-right:0}
 .team .nm{flex:1;font-size:13px;font-weight:700}
 .team .ck{color:var(--green);font-weight:900}
 .team.winner-actual{box-shadow:inset 0 0 0 2px var(--green)}
@@ -170,7 +175,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
-td .flag{font-size:18px;margin-right:6px}
+td .flag{margin-right:6px}
 .pill{display:inline-block;background:var(--green-light);color:var(--green-dark);font-weight:800;
   font-size:11px;padding:2px 9px;border-radius:20px}
 .count-pill{background:var(--gold);color:#1f2937}
@@ -194,6 +199,27 @@ td .flag{font-size:18px;margin-right:6px}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastOut{to{opacity:0;transform:translateY(14px)}}
 
+/* match marks + finished states */
+.mk{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;white-space:nowrap;margin-left:auto}
+.mk.win{color:var(--green-dark);background:var(--green-light)}
+.mk.ok{color:#fff;background:var(--green)}
+.mk.no{color:#fff;background:var(--red)}
+.match.done{background:#fbfbfb}
+.match.done .team{background:#f2f3f5}
+.match.done .team.winner-actual{background:var(--green-light);box-shadow:inset 0 0 0 2px var(--green);opacity:1}
+.match.done .team.lost-actual{opacity:.5}
+.m-foot{margin-top:9px;font-size:11px;font-weight:700;text-align:center;padding:7px;border-radius:9px;line-height:1.4}
+.m-foot.ok{color:var(--green-dark);background:var(--green-light)}
+.m-foot.no{color:var(--red);background:var(--red-soft)}
+.m-foot.muted{color:var(--muted);background:#f2f3f5}
+.m-tag.muted{background:#eef0f2;color:var(--muted)}
+/* loader */
+#loader{position:fixed;inset:0;z-index:400;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(240,253,244,.85);backdrop-filter:blur(4px)}
+#loader.show{display:flex}
+.ring{width:46px;height:46px;border:4px solid var(--green-light);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite}
+.ring.sm{width:20px;height:20px;border-width:3px}
+#loaderText{font-weight:700;color:var(--green-dark);font-size:14px}
+.lb-loading{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-weight:600;padding:40px 0;font-size:13px}
 .empty{text-align:center;color:var(--muted);padding:50px 20px}
 .empty .ic{font-size:46px;margin-bottom:12px}
 .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
@@ -304,13 +330,14 @@ td .flag{font-size:18px;margin-right:6px}
   </div>
 
   <nav class="nav">
-    <button class="active" data-tab="bracket"><span class="ic">🏆</span>Bracket</button>
+    <button class="active" data-tab="bracket"><span class="ic">🎯</span>Predict</button>
     <button data-tab="leaderboard"><span class="ic">📊</span>Ranks</button>
     <button data-tab="stats"><span class="ic">📈</span>Stats</button>
     <button class="admin-tab" data-tab="admin"><span class="ic">⚙️</span>Admin</button>
   </nav>
 </div>
 
+<div id="loader"><div class="ring"></div><div id="loaderText">Loading…</div></div>
 <div id="toast-wrap"></div>
 
 <script>
@@ -332,18 +359,26 @@ const CONFIG = {
 /* =========================================================
    TEAMS  (32 knockout teams)
    ========================================================= */
+// [Name, ISO code for flagcdn]  — image flags render on every platform incl. Windows
 const TEAMS = {
-  ARG:['🇦🇷','Argentina'], AUS:['🇦🇺','Australia'], BRA:['🇧🇷','Brazil'],   CRO:['🇭🇷','Croatia'],
-  FRA:['🇫🇷','France'],    JPN:['🇯🇵','Japan'],     ESP:['🇪🇸','Spain'],     SUI:['🇨🇭','Switzerland'],
-  ENG:['🏴','England'],     SEN:['🇸🇳','Senegal'],   NED:['🇳🇱','Netherlands'],USA:['🇺🇸','USA'],
-  POR:['🇵🇹','Portugal'],   KOR:['🇰🇷','South Korea'],BEL:['🇧🇪','Belgium'],  MAR:['🇲🇦','Morocco'],
-  GER:['🇩🇪','Germany'],    MEX:['🇲🇽','Mexico'],    URU:['🇺🇾','Uruguay'],   POL:['🇵🇱','Poland'],
-  ITA:['🇮🇹','Italy'],      CAN:['🇨🇦','Canada'],    COL:['🇨🇴','Colombia'],  ECU:['🇪🇨','Ecuador'],
-  DEN:['🇩🇰','Denmark'],    GHA:['🇬🇭','Ghana'],     NGA:['🇳🇬','Nigeria'],   SRB:['🇷🇸','Serbia'],
-  NOR:['🇳🇴','Norway'],     KSA:['🇸🇦','Saudi Arabia'],AUT:['🇦🇹','Austria'], PER:['🇵🇪','Peru']
+  ARG:['Argentina','ar'], AUS:['Australia','au'], BRA:['Brazil','br'],     CRO:['Croatia','hr'],
+  FRA:['France','fr'],    JPN:['Japan','jp'],     ESP:['Spain','es'],      SUI:['Switzerland','ch'],
+  ENG:['England','gb-eng'],SEN:['Senegal','sn'],  NED:['Netherlands','nl'],USA:['USA','us'],
+  POR:['Portugal','pt'],  KOR:['South Korea','kr'],BEL:['Belgium','be'],   MAR:['Morocco','ma'],
+  GER:['Germany','de'],   MEX:['Mexico','mx'],    URU:['Uruguay','uy'],    POL:['Poland','pl'],
+  ITA:['Italy','it'],     CAN:['Canada','ca'],    COL:['Colombia','co'],   ECU:['Ecuador','ec'],
+  DEN:['Denmark','dk'],   GHA:['Ghana','gh'],     NGA:['Nigeria','ng'],    SRB:['Serbia','rs'],
+  NOR:['Norway','no'],    KSA:['Saudi Arabia','sa'],AUT:['Austria','at'],  PER:['Peru','pe']
 };
-const flag = c => (TEAMS[c]?.[0]) || '⚽';
-const name = c => (TEAMS[c]?.[1]) || c;
+const name = c => (TEAMS[c]?.[0]) || c;
+const iso  = c => (TEAMS[c]?.[1]) || '';
+function flagHTML(c, cls){
+  cls = cls || 'flag';
+  const code = iso(c);
+  if(!code) return `<span class="${cls} flag-x">${c||'?'}</span>`;
+  return `<img class="${cls}" alt="${name(c)}" src="https://flagcdn.com/w160/${code}.png" onerror="flagFallback(this,'${c}')">`;
+}
+function flagFallback(img,c){ const s=document.createElement('span'); s.className=img.className+' flag-x'; s.textContent=c; try{img.replaceWith(s);}catch(e){} }
 
 /* =========================================================
    BRACKET (31 matches) — built once, dates from today+2
@@ -422,6 +457,8 @@ function toast(msg){
   document.getElementById('toast-wrap').appendChild(t);
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},1900);
 }
+function showLoader(txt){ document.getElementById('loaderText').textContent=txt||'Loading…'; document.getElementById('loader').classList.add('show'); }
+function hideLoader(){ document.getElementById('loader').classList.remove('show'); }
 const fmtDate = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 const fmtTime = d => d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 function isLocked(m){ return (m.date - new Date())/3600000 < CONFIG.LOCK_HOURS; }
@@ -494,6 +531,7 @@ if(!CONFIG.GOOGLE_CLIENT_ID){ // hide Google area cleanly when not configured
    LOAD
    ========================================================= */
 async function loadEverything(){
+  showLoader('Loading your predictions…');
   buildMatches();
   PICKS   = backendOn() ? {} : getJSON(LS.picks(USER.email),{});
   RESULTS = getJSON(LS.results(),{});
@@ -502,12 +540,14 @@ async function loadEverything(){
       const data = await api('load',{email:USER.email});
       PICKS   = data.picks   || {};
       RESULTS = data.results || {};
+      setJSON(LS.results(),RESULTS); // cache for offline
     }catch(e){ toast('Offline — using local data'); PICKS=getJSON(LS.picks(USER.email),{}); }
   }
   applyResultsToBracket();
   propagateAll();
   renderBracket(); renderStats(); renderLeaderboard();
   if(USER.isAdmin) renderAdmin();
+  hideLoader();
 }
 
 /* =========================================================
@@ -587,37 +627,58 @@ function renderBracket(){
 function matchCard(m,i){
   const el=document.createElement('div'); el.className='match';
   el.style.animationDelay=(i*0.03)+'s';
-  const locked=isLocked(m);
   const result=RESULTS[m.id]||null;
   const userPick=PICKS[m.id]||null;
-  if(locked) el.classList.add('locked');
-  if(result && userPick){ el.classList.add(userPick===result?'correct':'wrong'); }
+  const done   = !!result;                                  // official result entered
+  const locked = isLocked(m);                               // within 8h / kicked off
+  const past   = !!(m.t1 && m.t2) && m.date < new Date();   // started but no result yet
+  const interactive = !done && !locked && m.t1 && m.t2;     // can still predict?
 
-  // status tag
+  if(done){
+    el.classList.add('done', userPick ? (userPick===result?'correct':'wrong') : 'noresult');
+  } else if(locked){ el.classList.add('locked'); }
+
+  // status tag (top-right)
   let tag='';
-  if(result){
-    tag = userPick ? (userPick===result
-        ? '<span class="m-tag ok">✓ +'+ROUND_POINTS[m.roundKey]+'</span>'
-        : '<span class="m-tag no">✗ Missed</span>')
-      : '<span class="m-tag muted">Result in</span>';
-  } else if(locked){ tag='<span class="m-tag lock">🔒 Locked</span>'; }
+  if(done){
+    tag = userPick
+      ? (userPick===result
+          ? `<span class="m-tag ok">✓ Correct +${ROUND_POINTS[m.roundKey]}</span>`
+          : `<span class="m-tag no">✗ Wrong</span>`)
+      : `<span class="m-tag muted">Finished</span>`;
+  } else if(locked){
+    tag = past ? `<span class="m-tag lock">⏳ In play</span>`
+               : `<span class="m-tag lock">🔒 Locked</span>`;
+  }
 
   el.innerHTML =
     `<div class="m-date"><span>${fmtDate(m.date)} · ${fmtTime(m.date)}</span>${tag}</div>`
-    + teamRow(m,m.t1,userPick,result)
+    + teamRow(m,m.t1,userPick,result,interactive)
     + `<div class="vs">VS</div>`
-    + teamRow(m,m.t2,userPick,result);
+    + teamRow(m,m.t2,userPick,result,interactive)
+    + (done ? resultFooter(m,userPick,result) : '');
   return el;
 }
 
-function teamRow(m,team,userPick,result){
-  if(!team) return `<div class="team tbd"><span class="flag">⚽</span><span class="nm">TBD</span></div>`;
+function resultFooter(m,userPick,result){
+  if(!userPick) return `<div class="m-foot muted">🏆 ${name(result)} won · you didn't predict this one</div>`;
+  return userPick===result
+    ? `<div class="m-foot ok">🎯 Nailed it — ${name(result)} won (+${ROUND_POINTS[m.roundKey]} pts)</div>`
+    : `<div class="m-foot no">❌ You picked ${name(userPick)} · 🏆 ${name(result)} won</div>`;
+}
+
+function teamRow(m,team,userPick,result,interactive){
+  if(!team) return `<div class="team tbd static"><span class="flag-x">?</span><span class="nm">TBD</span></div>`;
   const picked = userPick===team;
-  let cls='team'+(picked?' picked':'');
-  if(result){ if(result===team) cls+=' winner-actual'; else cls+=' lost-actual'; }
-  const ck = picked ? '<span class="ck">✓</span>' : '';
-  return `<div class="${cls}" onclick="pick(${m.id},'${team}')">
-      <span class="flag">${flag(team)}</span><span class="nm">${name(team)}</span>${ck}</div>`;
+  let cls='team'+(picked?' picked':'')+(interactive?'':' static');
+  let mark = picked ? '<span class="ck">✓</span>' : '';
+  if(result){
+    if(result===team){ cls+=' winner-actual'; mark = picked ? '<span class="mk ok">✓ won</span>' : '<span class="mk win">🏆 won</span>'; }
+    else { cls+=' lost-actual'; mark = picked ? '<span class="mk no">✗ your pick</span>' : ''; }
+  }
+  const handler = interactive ? ` onclick="pick(${m.id},'${team}')"` : '';
+  return `<div class="${cls}"${handler}>
+      ${flagHTML(team)}<span class="nm">${name(team)}</span>${mark}</div>`;
 }
 
 /* =========================================================
@@ -644,7 +705,7 @@ function renderStats(){
 
   document.getElementById('champion').innerHTML = champ
     ? `<div class="lbl">Your Champion Pick</div>
-       <div class="fl">${flag(champ)}</div><div class="nm">${name(champ)}</div>`
+       <div class="fl">${flagHTML(champ,'flag flag-lg')}</div><div class="nm">${name(champ)}</div>`
     : `<div class="lbl">Your Champion Pick</div>
        <div class="fl">🏆</div><div class="empty">Fill your bracket to the Final to crown a champion</div>`;
 
@@ -652,7 +713,7 @@ function renderStats(){
     ['📋',made,'Predictions Made'],
     ['✅',correct,'Correct Picks'],
     ['⏳',editable,'Upcoming Editable'],
-    ['👑',champ?flag(champ):'—','Champion Pick']
+    ['👑',champ?flagHTML(champ,'flag flag-sm'):'—','Champion Pick']
   ];
   document.getElementById('stats').innerHTML = cards.map((c,i)=>
     `<div class="stat" style="animation-delay:${i*0.05}s">
@@ -702,6 +763,7 @@ const medalFor = rank => rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
 
 async function renderLeaderboard(){
   const host=document.getElementById('leaderboard');
+  if(!host.children.length) host.innerHTML=`<div class="lb-loading"><span class="ring sm"></span> Loading standings…</div>`;
   let rows=rankRows(await gatherStandings());
   if(!rows.length){ host.innerHTML=`<div class="empty"><div class="ic">📊</div>No players yet</div>`; return; }
   host.innerHTML=rows.map((r,i)=>{
@@ -736,11 +798,11 @@ function renderResultEditor(){
   MATCHES.forEach(m=>{
     if(!m.t1||!m.t2) return;
     const row=document.createElement('div'); row.className='result-pick';
-    row.innerHTML=`<div class="q"><b>${m.round}</b> · ${flag(m.t1)} ${name(m.t1)} v ${name(m.t2)} ${flag(m.t2)}</div>`;
+    row.innerHTML=`<div class="q"><b>${m.round}</b> · ${flagHTML(m.t1)} ${name(m.t1)} v ${name(m.t2)} ${flagHTML(m.t2)}</div>`;
     [m.t1,m.t2].forEach(tc=>{
       const b=document.createElement('button');
       b.className='rbtn'+(RESULTS[m.id]===tc?' sel':'');
-      b.innerHTML=`${flag(tc)} ${name(tc)}`;
+      b.innerHTML=`${flagHTML(tc)} ${name(tc)}`;
       b.onclick=()=>{
         if(RESULTS[m.id]===tc) delete RESULTS[m.id]; else RESULTS[m.id]=tc;
         setJSON(LS.results(),RESULTS); renderResultEditor();
@@ -764,7 +826,7 @@ function renderChampionSnapshot(){
   const host=document.getElementById('championSnapshot');
   if(!rows.length){ host.innerHTML=`<div class="empty" style="padding:20px"><div class="ic">👑</div>No champion picks yet</div>`; return; }
   host.innerHTML=`<table><thead><tr><th>Player</th><th>Picks to Win 🏆</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td>${r.name}</td><td><span class="flag">${flag(r.champ)}</span>${name(r.champ)}</td></tr>`).join('')+
+    rows.map(r=>`<tr><td>${r.name}</td><td>${flagHTML(r.champ)} ${name(r.champ)}</td></tr>`).join('')+
     `</tbody></table>`;
 }
 
