@@ -247,15 +247,10 @@ td .flag{margin-right:6px}
   <div class="auth-card">
     <div class="auth-emoji">⚽</div>
     <h1>Welcome</h1>
-    <p>Sign in with your company account to play</p>
+    <p>Sign in to make your predictions</p>
     <div id="gbtn"></div>
-    <div class="divider">or use your work email</div>
-    <input id="email" class="auth-input" type="email" inputmode="email" autocomplete="email"
-           placeholder="you@liveivory.com" aria-label="Work email">
-    <div style="height:12px"></div>
-    <button class="btn btn-primary" id="emailBtn">Continue</button>
     <div class="auth-err" id="authErr"></div>
-    <div class="auth-note">Only <b>@liveivory.com</b> accounts can join. You'll be known by your email. One account per person.</div>
+    <div class="auth-note">Sign in with your <b>@liveivory.com</b> Google account. One account per person — you'll be known by your email.</div>
   </div>
 </div>
 
@@ -493,8 +488,6 @@ function enterApp(){
   loadEverything();
 }
 
-document.getElementById('emailBtn').onclick=()=>signIn(document.getElementById('email').value);
-document.getElementById('email').addEventListener('keypress',e=>{if(e.key==='Enter')signIn(e.target.value)});
 document.getElementById('logout').onclick=()=>{
   localStorage.removeItem(LS.session()); USER=null; adminUnlocked=false;
   document.getElementById('app').classList.remove('show');
@@ -519,12 +512,6 @@ function initGoogle(){
       {theme:'outline',size:'large',width:300,text:'continue_with'});
   };
   document.head.appendChild(s);
-}
-if(!CONFIG.GOOGLE_CLIENT_ID){ // hide Google area cleanly when not configured
-  addEventListener('DOMContentLoaded',()=>{
-    document.getElementById('gbtn').style.display='none';
-    document.querySelector('.divider').style.display='none';
-  });
 }
 
 /* =========================================================
