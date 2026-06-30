@@ -83,13 +83,20 @@ The Google button appears automatically and only accepts `@liveivory.com` accoun
 
 ## How it works
 
-- **Bracket:** Round of 32 → 16 → QF → SF → Final (31 matches, 32 teams, all preloaded).
+- **Bracket:** Round of 32 → 16 → QF → SF → Final (31 matches, 32 teams).
+  Loaded with the **real 2026 World Cup knockout fixtures** (teams, dates, kickoff
+  times, host cities), in official bracket order.
 - **Picks** propagate forward; changing an upstream winner clears the now-invalid
   downstream picks automatically.
+- **Already-played matches** (e.g. the opening Round-of-32 results) are locked,
+  greyed, and show the winner — their real winner auto-advances so everyone can
+  still complete the rest of their bracket from there.
 - **Lock:** a match locks `CONFIG.LOCK_HOURS` (default 8) before kickoff.
 - **Scoring:** R32 = 1 pt, R16 = 2, QF = 3, SF = 5, Final = 8. Leaderboard ties
   share the same rank/medal.
-- **Dates** are generated from *today + 2 days* so matches start open and editable.
+- **Updating results:** admins enter winners as matches finish (Admin → Set
+  Results → Sync). Completed fixtures already known at launch are seeded in
+  `KNOWN_RESULTS` in `index.html`.
 
 All tunables live in the `CONFIG` block at the top of the `<script>` in `index.html`.
 

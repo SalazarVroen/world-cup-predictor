@@ -113,7 +113,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .match.locked{background:#fafafa}
 .match.correct{border-color:var(--green)}
 .match.wrong{border-color:var(--red)}
-.m-date{font-size:10.5px;color:var(--muted);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+.m-date{font-size:10.5px;color:var(--muted);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.m-venue{font-size:10px;color:var(--muted);margin:-3px 0 8px;opacity:.85}
 .m-tag{font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:6px}
 .m-tag.lock{background:#fff3cd;color:#946200}
 .m-tag.ok{background:var(--green-light);color:var(--green-dark)}
@@ -356,14 +357,14 @@ const CONFIG = {
    ========================================================= */
 // [Name, ISO code for flagcdn]  — image flags render on every platform incl. Windows
 const TEAMS = {
-  ARG:['Argentina','ar'], AUS:['Australia','au'], BRA:['Brazil','br'],     CRO:['Croatia','hr'],
-  FRA:['France','fr'],    JPN:['Japan','jp'],     ESP:['Spain','es'],      SUI:['Switzerland','ch'],
-  ENG:['England','gb-eng'],SEN:['Senegal','sn'],  NED:['Netherlands','nl'],USA:['USA','us'],
-  POR:['Portugal','pt'],  KOR:['South Korea','kr'],BEL:['Belgium','be'],   MAR:['Morocco','ma'],
-  GER:['Germany','de'],   MEX:['Mexico','mx'],    URU:['Uruguay','uy'],    POL:['Poland','pl'],
-  ITA:['Italy','it'],     CAN:['Canada','ca'],    COL:['Colombia','co'],   ECU:['Ecuador','ec'],
-  DEN:['Denmark','dk'],   GHA:['Ghana','gh'],     NGA:['Nigeria','ng'],    SRB:['Serbia','rs'],
-  NOR:['Norway','no'],    KSA:['Saudi Arabia','sa'],AUT:['Austria','at'],  PER:['Peru','pe']
+  RSA:['South Africa','za'], CAN:['Canada','ca'],   BRA:['Brazil','br'],      JPN:['Japan','jp'],
+  GER:['Germany','de'],      PAR:['Paraguay','py'], NED:['Netherlands','nl'], MAR:['Morocco','ma'],
+  CIV:['Ivory Coast','ci'],  NOR:['Norway','no'],   FRA:['France','fr'],      SWE:['Sweden','se'],
+  MEX:['Mexico','mx'],       ECU:['Ecuador','ec'],  ENG:['England','gb-eng'], COD:['DR Congo','cd'],
+  BEL:['Belgium','be'],      SEN:['Senegal','sn'],  USA:['USA','us'],         BIH:['Bosnia & Herz.','ba'],
+  ESP:['Spain','es'],        AUT:['Austria','at'],  POR:['Portugal','pt'],    CRO:['Croatia','hr'],
+  SUI:['Switzerland','ch'],  ALG:['Algeria','dz'],  AUS:['Australia','au'],   EGY:['Egypt','eg'],
+  ARG:['Argentina','ar'],    CPV:['Cape Verde','cv'],COL:['Colombia','co'],   GHA:['Ghana','gh']
 };
 const name = c => (TEAMS[c]?.[0]) || c;
 const iso  = c => (TEAMS[c]?.[1]) || '';
@@ -378,36 +379,51 @@ function flagFallback(img,c){ const s=document.createElement('span'); s.classNam
 /* =========================================================
    BRACKET (31 matches) — built once, dates from today+2
    ========================================================= */
-const R32_PAIRS = [
-  ['ARG','AUS'],['FRA','JPN'],['ENG','SEN'],['POR','KOR'],
-  ['GER','MEX'],['ITA','CAN'],['DEN','GHA'],['NOR','KSA'],
-  ['BRA','CRO'],['ESP','SUI'],['NED','USA'],['BEL','MAR'],
-  ['URU','POL'],['COL','ECU'],['NGA','SRB'],['AUT','PER']
+// Real FIFA World Cup 2026 Round of 32 — bracket order, top to bottom.
+// [team1, team2, kickoff (ET), host city]
+const R32_DATA = [
+  ['RSA','CAN','2026-06-28T15:00:00-04:00','Los Angeles'],
+  ['BRA','JPN','2026-06-29T13:00:00-04:00','Houston'],
+  ['GER','PAR','2026-06-29T18:30:00-04:00','Foxborough'],
+  ['NED','MAR','2026-06-29T21:00:00-04:00','Guadalajara'],
+  ['CIV','NOR','2026-06-30T13:00:00-04:00','Arlington'],
+  ['FRA','SWE','2026-06-30T17:00:00-04:00','East Rutherford'],
+  ['MEX','ECU','2026-07-01T22:00:00-04:00','Mexico City'],
+  ['ENG','COD','2026-07-01T12:00:00-04:00','Atlanta'],
+  ['BEL','SEN','2026-07-01T19:00:00-04:00','Seattle'],
+  ['USA','BIH','2026-07-02T19:00:00-04:00','Santa Clara'],
+  ['ESP','AUT','2026-07-02T15:00:00-04:00','Los Angeles'],
+  ['POR','CRO','2026-07-03T15:00:00-04:00','Toronto'],
+  ['SUI','ALG','2026-07-03T18:00:00-04:00','Vancouver'],
+  ['AUS','EGY','2026-07-03T13:00:00-04:00','Arlington'],
+  ['ARG','CPV','2026-07-03T21:00:00-04:00','Miami'],
+  ['COL','GHA','2026-07-04T15:00:00-04:00','Kansas City']
 ];
+// Completed R32 results (official) — winners auto-advance for everyone
+const KNOWN_RESULTS = { 1:'CAN', 2:'BRA', 3:'PAR', 4:'MAR' };
+const R16_DATES = ['2026-07-04T16:00:00-04:00','2026-07-04T20:00:00-04:00',
+  '2026-07-05T15:00:00-04:00','2026-07-05T19:00:00-04:00','2026-07-06T16:00:00-04:00',
+  '2026-07-06T20:00:00-04:00','2026-07-07T16:00:00-04:00','2026-07-07T20:00:00-04:00'];
+const QF_DATES = ['2026-07-09T17:00:00-04:00','2026-07-09T21:00:00-04:00',
+  '2026-07-11T13:00:00-04:00','2026-07-11T17:00:00-04:00'];
+const SF_DATES = ['2026-07-14T19:00:00-04:00','2026-07-15T19:00:00-04:00'];
+const FINAL_DATE = '2026-07-19T15:00:00-04:00';
 let MATCHES = [];
 
 function buildMatches(){
-  MATCHES = [];
-  const base = new Date(); base.setHours(0,0,0,0);
-  base.setDate(base.getDate()+2); base.setHours(16,0,0,0); // first kickoff today+2, 16:00
-  const at = h => new Date(base.getTime()+h*3600*1000);
-  let id=1;
-  // R32 — 16 matches, two per day-ish (3h apart, 6 a day window)
-  R32_PAIRS.forEach((p,i)=>{
-    MATCHES.push({id:id++,round:'Round of 32',roundKey:'R32',t1:p[0],t2:p[1],
-      date:at(Math.floor(i/2)*24 + (i%2)*4), dependsOn:[]});
+  MATCHES = []; let id=1;
+  R32_DATA.forEach(d=>{
+    MATCHES.push({id:id++,round:'Round of 32',roundKey:'R32',t1:d[0],t2:d[1],
+      date:new Date(d[2]), venue:d[3], dependsOn:[]});
   });
-  // R16 — 8
   for(let i=0;i<8;i++) MATCHES.push({id:id++,round:'Round of 16',roundKey:'R16',t1:null,t2:null,
-    date:at(96 + i*4), dependsOn:[1+i*2, 2+i*2]});
-  // QF — 4
+    date:new Date(R16_DATES[i]), venue:'', dependsOn:[1+i*2, 2+i*2]});
   for(let i=0;i<4;i++) MATCHES.push({id:id++,round:'Quarter Finals',roundKey:'QF',t1:null,t2:null,
-    date:at(168 + i*5), dependsOn:[17+i*2, 18+i*2]});
-  // SF — 2
+    date:new Date(QF_DATES[i]), venue:'', dependsOn:[17+i*2, 18+i*2]});
   for(let i=0;i<2;i++) MATCHES.push({id:id++,round:'Semi Finals',roundKey:'SF',t1:null,t2:null,
-    date:at(216 + i*24), dependsOn:[25+i*2, 26+i*2]});
-  // Final — 1
-  MATCHES.push({id:id++,round:'Final',roundKey:'FN',t1:null,t2:null,date:at(288),dependsOn:[29,30]});
+    date:new Date(SF_DATES[i]), venue:'', dependsOn:[25+i*2, 26+i*2]});
+  MATCHES.push({id:id++,round:'Final',roundKey:'FN',t1:null,t2:null,
+    date:new Date(FINAL_DATE), venue:'New York / New Jersey', dependsOn:[29,30]});
 }
 
 const ROUND_POINTS = {R32:1,R16:2,QF:3,SF:5,FN:8};
@@ -521,12 +537,12 @@ async function loadEverything(){
   showLoader('Loading your predictions…');
   buildMatches();
   PICKS   = backendOn() ? {} : getJSON(LS.picks(USER.email),{});
-  RESULTS = getJSON(LS.results(),{});
+  RESULTS = {...KNOWN_RESULTS, ...getJSON(LS.results(),{})};
   if(backendOn()){
     try{
       const data = await api('load',{email:USER.email});
       PICKS   = data.picks   || {};
-      RESULTS = data.results || {};
+      RESULTS = {...KNOWN_RESULTS, ...(data.results || {})};
       setJSON(LS.results(),RESULTS); // cache for offline
     }catch(e){ toast('Offline — using local data'); PICKS=getJSON(LS.picks(USER.email),{}); }
   }
@@ -546,12 +562,13 @@ function propagateAll(){
   // reset downstream slots then fill from picks, in round order
   MATCHES.forEach(m=>{ if(m.dependsOn.length){ m.t1=null; m.t2=null; } });
   MATCHES.forEach(m=>{
-    const pick=PICKS[m.id];
-    if(pick==null) return;
-    // place pick winner into the slot of any match depending on m
+    // a team advances by the user's prediction; if the match is already decided
+    // and they had no pick (e.g. it finished before they joined), the real winner advances
+    const adv = PICKS[m.id] || RESULTS[m.id];
+    if(adv==null) return;
     MATCHES.forEach(n=>{
       const idx=n.dependsOn.indexOf(m.id);
-      if(idx===0) n.t1=pick; else if(idx===1) n.t2=pick;
+      if(idx===0) n.t1=adv; else if(idx===1) n.t2=adv;
     });
   });
 }
@@ -640,6 +657,7 @@ function matchCard(m,i){
 
   el.innerHTML =
     `<div class="m-date"><span>${fmtDate(m.date)} · ${fmtTime(m.date)}</span>${tag}</div>`
+    + (m.venue?`<div class="m-venue">📍 ${m.venue}</div>`:'')
     + teamRow(m,m.t1,userPick,result,interactive)
     + `<div class="vs">VS</div>`
     + teamRow(m,m.t2,userPick,result,interactive)
