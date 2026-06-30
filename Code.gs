@@ -39,7 +39,8 @@ function doPost(e){
       savePicks:   savePicks,
       saveResults: saveResults,
       recalculate: recalculate,
-      leaderboard: leaderboard
+      leaderboard: leaderboard,
+      matchStats:  matchStats
     }[req.action];
     out = fn ? fn(req) : { error: 'unknown action: ' + req.action };
   } catch (err) {
@@ -152,13 +153,36 @@ function recalculate(){
 }
 
 function leaderboard(){
+  var results = {};
+  rows(sheet('Results', ['MatchID','Winner'])).forEach(function(r){
+    if (r[0] !== '' && r[1] !== '') results[String(r[0])] = r[1];
+  });
+  var decided = {};
+  rows(sheet('Predictions', ['Email','MatchID','Pick'])).forEach(function(r){
+    var email = String(r[0]).toLowerCase(), mid = String(r[1]);
+    if (results[mid] !== undefined) decided[email] = (decided[email]||0)+1;
+  });
   var out = [];
   rows(sheet('Users', ['Email','Name','Points','Correct'])).forEach(function(r){
+    var email = String(r[0]).toLowerCase();
     out.push({ email: r[0], name: r[1] || r[0],
-               points: Number(r[2]) || 0, correct: Number(r[3]) || 0 });
+               points: Number(r[2]) || 0, correct: Number(r[3]) || 0,
+               pickedDecided: decided[email] || 0 });
   });
   out.sort(function(a,b){ return b.points - a.points || b.correct - a.correct; });
   return { rows: out };
+}
+
+function matchStats(){
+  var stats = {};
+  rows(sheet('Predictions', ['Email','MatchID','Pick'])).forEach(function(r){
+    var mid = String(r[1]), pick = String(r[2]);
+    if (!mid || !pick || pick === '' || pick === 'undefined') return;
+    if (!stats[mid]) stats[mid] = { picks: {}, total: 0 };
+    stats[mid].picks[pick] = (stats[mid].picks[pick] || 0) + 1;
+    stats[mid].total++;
+  });
+  return { stats: stats };
 }
 
 function buildLeaderboardSheet(){

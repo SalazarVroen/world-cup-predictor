@@ -247,6 +247,13 @@ td .flag{margin-right:6px}
   border-radius:50%;display:inline-block;animation:spin .6s linear infinite;vertical-align:-2px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ---------- Ivory Stats ---------- */
+.ivory-champ-card{background:linear-gradient(135deg,var(--green-light) 0%,#e0f2fe 100%);border:1.5px solid var(--green);border-radius:18px;padding:16px;text-align:center;margin-bottom:12px}
+.ivory-champ-card .champ-flag-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 6px}
+.ivory-leader-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:12px;margin-bottom:10px;border:1.5px solid var(--teal)}
+.ivory-section-wrap{padding:0 14px 14px}
+.acc-txt{font-size:11.5px;color:var(--muted);font-weight:600}
+
 @media(min-width:640px){
   .stats{grid-template-columns:repeat(4,1fr);max-width:760px;margin:14px auto}
   .champion{max-width:760px;margin:14px auto 0}
@@ -316,6 +323,7 @@ td .flag{margin-right:6px}
       <div class="champion" id="champion"></div>
       <div class="section-title" style="margin:18px 16px 0">📊 Your Stats</div>
       <div class="stats" id="stats"></div>
+      <div id="ivory-stats-wrap"></div>
     </section>
 
     <!-- Admin -->
@@ -463,6 +471,7 @@ let USER = null;                 // {email,name,isAdmin}
 let PICKS = {};                  // matchId -> teamCode (current user)
 let RESULTS = {};                // matchId -> winning teamCode (official)
 let adminUnlocked = false;
+let MATCH_STATS = {};  // matchId(str) -> {picks:{team:count}, total:count}
 
 const LS = {
   picks:  e => `wc_picks_${e}`,
@@ -591,6 +600,10 @@ async function loadEverything(){
   }
   applyResultsToBracket();
   propagateAll();
+  // load per-match pick distribution (powers "X of Y" + Ivory Stats)
+  if(backendOn()){
+    try{ const ms=await api('matchStats',{}); MATCH_STATS=ms.stats||{}; }catch(e){}
+  } else { MATCH_STATS=computeLocalMatchStats(); }
   renderBracket(); renderStats(); renderLeaderboard();
   if(USER.isAdmin) renderAdmin();
   hideLoader();
@@ -715,10 +728,15 @@ function matchCard(m,i){
 }
 
 function resultFooter(m,userPick,result){
-  if(!userPick) return `<div class="m-foot muted">🏆 ${name(result)} won · you didn't predict this one</div>`;
-  return userPick===result
-    ? `<div class="m-foot ok">🎯 Nailed it — ${name(result)} won (+${ROUND_POINTS[m.roundKey]} pts)</div>`
-    : `<div class="m-foot no">❌ You picked ${name(userPick)} · 🏆 ${name(result)} won</div>`;
+  const ms=MATCH_STATS[String(m.id)];
+  const comm=ms&&ms.total>0
+    ?`<div class="m-foot muted" style="margin-top:4px;font-size:10.5px">👥 ${ms.picks[result]||0} of ${ms.total} picked ${name(result)}</div>`
+    :'';
+  if(!userPick) return `<div class="m-foot muted">🏆 ${name(result)} won · you didn't predict</div>${comm}`;
+  return (userPick===result
+    ?`<div class="m-foot ok">🎯 Nailed it — ${name(result)} won (+${ROUND_POINTS[m.roundKey]} pts)</div>`
+    :`<div class="m-foot no">❌ You picked ${name(userPick)} · 🏆 ${name(result)} won</div>`)
+    +comm;
 }
 
 function teamRow(m,team,userPick,result,interactive){
@@ -772,11 +790,91 @@ function renderStats(){
   document.getElementById('stats').innerHTML = cards.map((c,i)=>
     `<div class="stat" style="animation-delay:${i*0.05}s">
        <div class="ic">${c[0]}</div><div class="v">${c[1]}</div><div class="l">${c[2]}</div></div>`).join('');
+  renderIvoryStats();
+}
+
+async function renderIvoryStats(){
+  const host=document.getElementById('ivory-stats-wrap');
+  if(!host) return;
+  host.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted)"><span class="ring sm"></span></div>`;
+  try{
+    const standings=await gatherStandings();
+    const ranked=rankRows([...standings]);
+    const playerCount=standings.length;
+    const totalCorrect=standings.reduce((s,r)=>s+(r.correct||0),0);
+    const totalDecided=standings.reduce((s,r)=>s+(r.pickedDecided||0),0);
+    const compAcc=totalDecided>0?Math.round(totalCorrect/totalDecided*100):null;
+    let totalPreds=0;
+    Object.values(MATCH_STATS).forEach(ms=>{totalPreds+=ms.total||0;});
+
+    // company champion pick — most popular pick for the Final (match 31)
+    const ms31=MATCH_STATS['31']||MATCH_STATS[31];
+    let champHTML='';
+    if(ms31&&ms31.total>0){
+      const sorted=Object.entries(ms31.picks).sort((a,b)=>b[1]-a[1]);
+      if(sorted.length){
+        const [cc,cn]=sorted[0];
+        const pct=Math.round(cn/ms31.total*100);
+        const runner=sorted[1]
+          ?`<div class="acc-txt" style="margin-top:4px">Runner-up: ${flagHTML(sorted[1][0],'flag')} ${name(sorted[1][0])} · ${sorted[1][1]} pick${sorted[1][1]!==1?'s':''}</div>`
+          :'';
+        champHTML=`<div class="ivory-champ-card">
+          <div class="section-title" style="margin:0 0 6px;font-size:12px">🏆 Company Favorite to Win</div>
+          <div class="champ-flag-row">${flagHTML(cc,'flag flag-sm')} <span style="font-size:20px;font-weight:900;color:var(--ink)">${name(cc)}</span></div>
+          <div class="acc-txt">${cn} of ${ms31.total} player${ms31.total!==1?'s':''} picked them · ${pct}%</div>${runner}
+        </div>`;
+      }
+    }
+
+    // current leader card
+    const leader=ranked[0];
+    let leaderHTML='';
+    if(leader){
+      const accTxt=leader.pickedDecided>0?` · 🎯 ${Math.round(leader.accuracy*100)}% acc`:'';
+      leaderHTML=`<div class="ivory-leader-card">
+        <div class="lb-rank"><span class="medal">🥇</span></div>
+        <div class="lb-info">
+          <div class="lb-name">${leader.name}</div>
+          <div class="lb-sub">✅ ${leader.correct} correct${accTxt}</div>
+        </div>
+        <div class="lb-pts"><div class="n">${leader.points}</div><div class="u">PTS</div></div>
+      </div>`;
+    }
+
+    const statCards=[
+      {ic:'👥',v:playerCount||'—',l:'Players'},
+      {ic:'🎯',v:compAcc!==null?compAcc+'%':'—',l:'Company Accuracy'},
+      {ic:'✅',v:totalCorrect||'—',l:'Total Correct'},
+      {ic:'📋',v:totalPreds||'—',l:'Total Picks'},
+    ];
+    host.innerHTML=`
+      <div class="section-title" style="margin:18px 16px 0">🌍 Ivory Stats</div>
+      <div class="stats">${statCards.map((c,i)=>`<div class="stat" style="animation-delay:${i*0.05}s"><div class="ic">${c.ic}</div><div class="v">${c.v}</div><div class="l">${c.l}</div></div>`).join('')}</div>
+      <div class="ivory-section-wrap">${champHTML}${leaderHTML}</div>`;
+  }catch(e){
+    host.innerHTML='';
+  }
 }
 
 /* =========================================================
    LEADERBOARD
    ========================================================= */
+function computeLocalMatchStats(){
+  const all=getJSON(LS.allpicks(),{});
+  const stats={};
+  for(const email in all){
+    const picks=all[email]||{};
+    for(const mid in picks){
+      const t=picks[mid]; if(!t) continue;
+      const k=String(mid);
+      if(!stats[k]) stats[k]={picks:{},total:0};
+      stats[k].picks[t]=(stats[k].picks[t]||0)+1;
+      stats[k].total++;
+    }
+  }
+  return stats;
+}
+
 async function gatherStandings(){
   // returns [{email,name,correct,points}]  — admins are excluded (not players)
   let rows=null;
@@ -788,8 +886,10 @@ async function gatherStandings(){
     const users=getJSON(LS.users(),{});
     const all=getJSON(LS.allpicks(),{});
     rows=Object.keys(users).map(email=>{
-      const s=scoreFor(all[email]||{});
-      return {email,name:users[email],correct:s.correct,points:s.points};
+      const picks=all[email]||{};
+      const s=scoreFor(picks);
+      let pd=0; for(const mid in picks){ if(RESULTS[mid]) pd++; }
+      return {email,name:users[email],correct:s.correct,points:s.points,pickedDecided:pd};
     });
     if(rows.length<=1) rows = seedDemo(rows);
   }
@@ -802,8 +902,10 @@ function seedDemo(rows){
     ['lena.fischer@liveivory.com','Lena Fischer']
   ];
   const haveMine = scoreFor(PICKS);
-  const seeded = demo.map((d,i)=>({email:d[0],name:d[1],
-    correct:Math.max(0,7-i+(i%2)), points:Math.max(0,16-i*2)}));
+  const seeded = demo.map((d,i)=>{
+    const c=Math.max(0,7-i+(i%2)), p=Math.max(0,16-i*2), pd=Math.max(c,c+i%2+1);
+    return {email:d[0],name:d[1],correct:c,points:p,pickedDecided:pd};
+  });
   // ensure current user present
   if(!rows.find(r=>r.email===USER.email))
     rows.push({email:USER.email,name:USER.name,correct:haveMine.correct,points:haveMine.points});
@@ -811,9 +913,14 @@ function seedDemo(rows){
 }
 
 function rankRows(rows){
-  rows.sort((a,b)=> b.points-a.points || b.correct-a.correct || a.name.localeCompare(b.name));
-  let rank=0,prevP=null,prevC=null,seen=0;
-  rows.forEach(r=>{ seen++; if(r.points!==prevP||r.correct!==prevC){rank=seen;prevP=r.points;prevC=r.correct;} r.rank=rank; });
+  rows.forEach(r=>{ r.accuracy=r.pickedDecided>0?r.correct/r.pickedDecided:0; });
+  rows.sort((a,b)=>{
+    if(b.points!==a.points) return b.points-a.points;
+    if(Math.abs(b.accuracy-a.accuracy)>0.0001) return b.accuracy-a.accuracy;
+    return a.name.localeCompare(b.name);
+  });
+  let rank=0,prevP=null,prevA=null,seen=0;
+  rows.forEach(r=>{ seen++; if(r.points!==prevP||Math.abs(r.accuracy-prevA)>0.0001){rank=seen;prevP=r.points;prevA=r.accuracy;} r.rank=rank; });
   return rows;
 }
 const medalFor = rank => rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
@@ -830,7 +937,7 @@ async function renderLeaderboard(){
       <div class="lb-rank">${medal?`<span class="medal">${medal}</span>`:'#'+r.rank}</div>
       <div class="lb-info">
         <div class="lb-name">${r.name}${me?'<span class="you-badge">YOU</span>':''}</div>
-        <div class="lb-sub">✅ ${r.correct} correct</div>
+        <div class="lb-sub">✅ ${r.correct} correct${r.pickedDecided>0?' · 🎯 '+Math.round(r.accuracy*100)+'% acc':''}</div>
       </div>
       <div class="lb-pts"><div class="n">${r.points}</div><div class="u">PTS</div></div>
     </div>`;
@@ -851,24 +958,33 @@ function renderAdmin(){ renderResultEditor(); renderChampionSnapshot(); renderAd
 
 function renderResultEditor(){
   const host=document.getElementById('resultEditor'); host.innerHTML='';
-  // only matches that have both teams known are settable
-  MATCHES.forEach(m=>{
-    if(!m.t1||!m.t2) return;
-    const row=document.createElement('div'); row.className='result-pick';
-    row.innerHTML=`<div class="q"><b>${m.round}</b> · ${flagHTML(m.t1)} ${name(m.t1)} v ${name(m.t2)} ${flagHTML(m.t2)}</div>`;
-    [m.t1,m.t2].forEach(tc=>{
-      const b=document.createElement('button');
-      b.className='rbtn'+(RESULTS[m.id]===tc?' sel':'');
-      b.innerHTML=`${flagHTML(tc)} ${name(tc)}`;
-      b.onclick=()=>{
-        if(RESULTS[m.id]===tc) delete RESULTS[m.id]; else RESULTS[m.id]=tc;
-        setJSON(LS.results(),RESULTS); renderResultEditor();
-      };
-      row.appendChild(b);
+  let total=0;
+  ROUND_ORDER.forEach(rn=>{
+    const ms=MATCHES.filter(m=>m.round===rn&&m.t1&&m.t2);
+    if(!ms.length) return;
+    const set=ms.filter(m=>!!RESULTS[m.id]).length;
+    const hdr=document.createElement('div');
+    hdr.className='section-title'; hdr.style='margin:12px 2px 8px';
+    hdr.innerHTML=`${rn} <span class="pill">${set}/${ms.length} set</span>`;
+    host.appendChild(hdr);
+    ms.forEach(m=>{
+      total++;
+      const row=document.createElement('div'); row.className='result-pick';
+      row.innerHTML=`<div class="q"><b>${fmtDate(m.date)}</b> · ${flagHTML(m.t1)} ${name(m.t1)} vs ${flagHTML(m.t2)} ${name(m.t2)}</div>`;
+      [m.t1,m.t2].forEach(tc=>{
+        const b=document.createElement('button');
+        b.className='rbtn'+(RESULTS[m.id]===tc?' sel':'');
+        b.innerHTML=`${flagHTML(tc)} ${name(tc)}`;
+        b.onclick=()=>{
+          if(RESULTS[m.id]===tc) delete RESULTS[m.id]; else RESULTS[m.id]=tc;
+          setJSON(LS.results(),RESULTS); renderResultEditor();
+        };
+        row.appendChild(b);
+      });
+      host.appendChild(row);
     });
-    host.appendChild(row);
   });
-  if(!host.children.length) host.innerHTML=`<div class="empty" style="padding:20px"><div class="ic">🗓️</div>No matches have both teams set yet</div>`;
+  if(!total) host.innerHTML=`<div class="empty" style="padding:20px"><div class="ic">🗓️</div>No matches have both teams set yet</div>`;
 }
 
 function renderChampionSnapshot(){
@@ -890,8 +1006,12 @@ function renderChampionSnapshot(){
 async function renderAdminLeaderboard(){
   const rows=rankRows(await gatherStandings());
   const host=document.getElementById('adminLeaderboard');
-  host.innerHTML=`<table><thead><tr><th>#</th><th>Player</th><th>Correct</th><th>Pts</th></tr></thead><tbody>`+
-    rows.map(r=>{const m=medalFor(r.rank);return `<tr><td>${m||r.rank}</td><td>${r.name}</td><td>${r.correct}</td><td><b>${r.points}</b></td></tr>`}).join('')+
+  host.innerHTML=`<table><thead><tr><th>#</th><th>Player</th><th>Correct</th><th>Acc</th><th>Pts</th></tr></thead><tbody>`+
+    rows.map(r=>{
+      const m=medalFor(r.rank);
+      const acc=r.pickedDecided>0?Math.round(r.accuracy*100)+'%':'—';
+      return `<tr><td>${m||r.rank}</td><td>${r.name}</td><td>${r.correct}</td><td>${acc}</td><td><b>${r.points}</b></td></tr>`;
+    }).join('')+
     `</tbody></table>`;
 }
 
