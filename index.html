@@ -472,6 +472,7 @@ let PICKS = {};                  // matchId -> teamCode (current user)
 let RESULTS = {};                // matchId -> winning teamCode (official)
 let adminUnlocked = false;
 let MATCH_STATS = {};  // matchId(str) -> {picks:{team:count}, total:count}
+let PARTICIPANT_COUNT = 0;
 
 const LS = {
   picks:  e => `wc_picks_${e}`,
@@ -799,16 +800,11 @@ async function renderIvoryStats(){
   host.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted)"><span class="ring sm"></span></div>`;
   try{
     const standings=await gatherStandings();
-    const ranked=rankRows([...standings]);
     const playerCount=standings.length;
-    const totalCorrect=standings.reduce((s,r)=>s+(r.correct||0),0);
-    const totalDecided=standings.reduce((s,r)=>s+(r.pickedDecided||0),0);
-    const compAcc=totalDecided>0?Math.round(totalCorrect/totalDecided*100):null;
-    let totalPreds=0;
-    Object.values(MATCH_STATS).forEach(ms=>{totalPreds+=ms.total||0;});
+    const participating=PARTICIPANT_COUNT||playerCount;
 
-    // company champion pick — most popular pick for the Final (match 31)
-    const ms31=MATCH_STATS['31']||MATCH_STATS[31];
+    // company champion pick — most popular Final pick (match 31)
+    const ms31=MATCH_STATS['31'];
     let champHTML='';
     if(ms31&&ms31.total>0){
       const sorted=Object.entries(ms31.picks).sort((a,b)=>b[1]-a[1]);
@@ -816,7 +812,7 @@ async function renderIvoryStats(){
         const [cc,cn]=sorted[0];
         const pct=Math.round(cn/ms31.total*100);
         const runner=sorted[1]
-          ?`<div class="acc-txt" style="margin-top:4px">Runner-up: ${flagHTML(sorted[1][0],'flag')} ${name(sorted[1][0])} · ${sorted[1][1]} pick${sorted[1][1]!==1?'s':''}</div>`
+          ?`<div class="acc-txt" style="margin-top:5px">Runner-up: ${flagHTML(sorted[1][0],'flag')} ${name(sorted[1][0])} · ${sorted[1][1]} pick${sorted[1][1]!==1?'s':''}</div>`
           :'';
         champHTML=`<div class="ivory-champ-card">
           <div class="section-title" style="margin:0 0 6px;font-size:12px">🏆 Company Favorite to Win</div>
@@ -826,31 +822,14 @@ async function renderIvoryStats(){
       }
     }
 
-    // current leader card
-    const leader=ranked[0];
-    let leaderHTML='';
-    if(leader){
-      const accTxt=leader.pickedDecided>0?` · 🎯 ${Math.round(leader.accuracy*100)}% acc`:'';
-      leaderHTML=`<div class="ivory-leader-card">
-        <div class="lb-rank"><span class="medal">🥇</span></div>
-        <div class="lb-info">
-          <div class="lb-name">${leader.name}</div>
-          <div class="lb-sub">✅ ${leader.correct} correct${accTxt}</div>
-        </div>
-        <div class="lb-pts"><div class="n">${leader.points}</div><div class="u">PTS</div></div>
-      </div>`;
-    }
-
     const statCards=[
       {ic:'👥',v:playerCount||'—',l:'Players'},
-      {ic:'🎯',v:compAcc!==null?compAcc+'%':'—',l:'Company Accuracy'},
-      {ic:'✅',v:totalCorrect||'—',l:'Total Correct'},
-      {ic:'📋',v:totalPreds||'—',l:'Total Picks'},
+      {ic:'🎯',v:participating||'—',l:'Participating'},
     ];
     host.innerHTML=`
       <div class="section-title" style="margin:18px 16px 0">🌍 Ivory Stats</div>
-      <div class="stats">${statCards.map((c,i)=>`<div class="stat" style="animation-delay:${i*0.05}s"><div class="ic">${c.ic}</div><div class="v">${c.v}</div><div class="l">${c.l}</div></div>`).join('')}</div>
-      <div class="ivory-section-wrap">${champHTML}${leaderHTML}</div>`;
+      <div class="stats" style="grid-template-columns:1fr 1fr;max-width:400px">${statCards.map((c,i)=>`<div class="stat" style="animation-delay:${i*0.05}s"><div class="ic">${c.ic}</div><div class="v">${c.v}</div><div class="l">${c.l}</div></div>`).join('')}</div>
+      <div class="ivory-section-wrap">${champHTML}</div>`;
   }catch(e){
     host.innerHTML='';
   }
@@ -882,11 +861,11 @@ async function gatherStandings(){
     try{
       const r=await api('leaderboard',{});
       if(r&&r.rows) rows=r.rows;
-      // seed champion pick fallback — leaderboard now returns champPicks from the Predictions sheet
       if(r&&r.champPicks){
         const total=Object.values(r.champPicks).reduce((s,n)=>s+n,0);
         if(total>0) MATCH_STATS['31']={picks:r.champPicks,total};
       }
+      if(r&&r.participantCount) PARTICIPANT_COUNT=r.participantCount;
     }catch(e){}
   }
   if(!rows){

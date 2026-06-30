@@ -157,9 +157,10 @@ function leaderboard(){
   rows(sheet('Results', ['MatchID','Winner'])).forEach(function(r){
     if (r[0] !== '' && r[1] !== '') results[String(r[0])] = r[1];
   });
-  var decided = {}, champPicks = {};
+  var decided = {}, champPicks = {}, participants = {};
   rows(sheet('Predictions', ['Email','MatchID','Pick'])).forEach(function(r){
     var email = String(r[0]).toLowerCase(), mid = String(r[1]), pick = String(r[2]);
+    if (pick && pick !== '' && pick !== 'undefined') participants[email] = true;
     if (results[mid] !== undefined) decided[email] = (decided[email]||0)+1;
     if (mid === '31' && pick && pick !== '' && pick !== 'undefined') {
       champPicks[pick] = (champPicks[pick]||0)+1;
@@ -173,7 +174,7 @@ function leaderboard(){
                pickedDecided: decided[email] || 0 });
   });
   out.sort(function(a,b){ return b.points - a.points || b.correct - a.correct; });
-  return { rows: out, champPicks: champPicks };
+  return { rows: out, champPicks: champPicks, participantCount: Object.keys(participants).length };
 }
 
 function matchStats(){
