@@ -451,8 +451,10 @@ function buildMatches(){
     MATCHES.push({id:id++,round:'Round of 32',roundKey:'R32',t1:d[0],t2:d[1],
       date:new Date(d[2]), venue:d[3], dependsOn:[]});
   });
+  // Official 2026 WC R16 bracket pairings (not sequential — cross-bracket matchups)
+  const R16_DEPS=[[1,4],[3,6],[2,5],[7,8],[12,11],[10,9],[15,14],[13,16]];
   for(let i=0;i<8;i++) MATCHES.push({id:id++,round:'Round of 16',roundKey:'R16',t1:null,t2:null,
-    date:new Date(R16_DATES[i]), venue:'', dependsOn:[1+i*2, 2+i*2]});
+    date:new Date(R16_DATES[i]), venue:'', dependsOn:R16_DEPS[i]});
   for(let i=0;i<4;i++) MATCHES.push({id:id++,round:'Quarter Finals',roundKey:'QF',t1:null,t2:null,
     date:new Date(QF_DATES[i]), venue:'', dependsOn:[17+i*2, 18+i*2]});
   for(let i=0;i<2;i++) MATCHES.push({id:id++,round:'Semi Finals',roundKey:'SF',t1:null,t2:null,
