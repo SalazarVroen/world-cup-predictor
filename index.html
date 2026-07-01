@@ -379,7 +379,7 @@ const CONFIG = {
   DOMAIN: 'liveivory.com',
   ADMIN_EMAIL: 'admin@liveivory.com',
   ADMIN_PASSWORD: 'worldcup2026',
-  LOCK_HOURS: 8,
+  LOCK_HOURS: 0.5,
   // OPTIONAL — paste your deployed Apps Script Web App URL to enable the shared
   // Google-Sheets database (real cross-user leaderboard). Leave '' to run locally.
   BACKEND_URL: 'https://script.google.com/macros/s/AKfycbwgmRlJVo3dLoYCw4jE-tlnNhuqvrm0FG61D6cc8j7f4f_MDV1zQcCdQOiOo1JECO1b/exec',
@@ -439,10 +439,10 @@ const KNOWN_RESULTS = { 1:'CAN', 2:'BRA', 3:'PAR', 4:'MAR' };
 const R16_DATES = ['2026-07-04T16:00:00-04:00','2026-07-04T20:00:00-04:00',
   '2026-07-05T15:00:00-04:00','2026-07-05T19:00:00-04:00','2026-07-06T16:00:00-04:00',
   '2026-07-06T20:00:00-04:00','2026-07-07T16:00:00-04:00','2026-07-07T20:00:00-04:00'];
-const QF_DATES = ['2026-07-09T17:00:00-04:00','2026-07-09T21:00:00-04:00',
-  '2026-07-11T13:00:00-04:00','2026-07-11T17:00:00-04:00'];
+const QF_DATES = ['2026-07-09T21:00:00-04:00','2026-07-10T20:00:00-04:00',
+  '2026-07-11T22:00:00-04:00','2026-07-12T02:00:00-04:00'];
 const SF_DATES = ['2026-07-14T19:00:00-04:00','2026-07-15T19:00:00-04:00'];
-const FINAL_DATE = '2026-07-19T15:00:00-04:00';
+const FINAL_DATE = '2026-07-19T20:00:00-04:00';
 let MATCHES = [];
 
 function buildMatches(){
@@ -455,8 +455,11 @@ function buildMatches(){
   const R16_DEPS=[[1,4],[3,6],[2,5],[7,8],[12,11],[10,9],[15,14],[13,16]];
   for(let i=0;i<8;i++) MATCHES.push({id:id++,round:'Round of 16',roundKey:'R16',t1:null,t2:null,
     date:new Date(R16_DATES[i]), venue:'', dependsOn:R16_DEPS[i]});
+  // Official QF bracket: QF1=winner(CAN/MAR)vs winner(PAR/FRA), QF2=winner(POR/CRO·ESP/AUT)vs winner(USA/BIH·BEL/SEN),
+  // QF3=winner(BRA/NOR)vs winner(MEX/ECU·ENG/COD), QF4=winner(ARG/CPV·AUS/EGY)vs winner(SUI/ALG·COL/GHA)
+  const QF_DEPS=[[17,18],[21,22],[19,20],[23,24]];
   for(let i=0;i<4;i++) MATCHES.push({id:id++,round:'Quarter Finals',roundKey:'QF',t1:null,t2:null,
-    date:new Date(QF_DATES[i]), venue:'', dependsOn:[17+i*2, 18+i*2]});
+    date:new Date(QF_DATES[i]), venue:'', dependsOn:QF_DEPS[i]});
   for(let i=0;i<2;i++) MATCHES.push({id:id++,round:'Semi Finals',roundKey:'SF',t1:null,t2:null,
     date:new Date(SF_DATES[i]), venue:'', dependsOn:[25+i*2, 26+i*2]});
   MATCHES.push({id:id++,round:'Final',roundKey:'FN',t1:null,t2:null,
@@ -512,8 +515,8 @@ function hideLoader(){ document.getElementById('loader').classList.remove('show'
 const fmtDate = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 const fmtTime = d => d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 function kickedOff(m){ return m.date <= new Date(); }                        // match has started
-function withinLock(m){ return (m.date - new Date())/3600000 < CONFIG.LOCK_HOURS; } // inside the 8h freeze window
-// You can place a NEW prediction right up to kickoff; the 8h lock only stops you CHANGING one.
+function withinLock(m){ return (m.date - new Date())/3600000 < CONFIG.LOCK_HOURS; } // inside the 30-min freeze window
+// You can place a NEW prediction right up to kickoff; the 30-min lock only stops you CHANGING one.
 function isOpen(m){
   if(RESULTS[m.id] || kickedOff(m) || !m.t1 || !m.t2) return false;
   if(PICKS[m.id] && withinLock(m)) return false; // has a pick + inside freeze window = can't change
@@ -602,7 +605,7 @@ async function loadEverything(){
     }catch(e){ toast('Offline — using local data'); PICKS=getJSON(LS.picks(USER.email),{}); }
   }
   applyResultsToBracket();
-  propagateAll();
+  if(propagateAll()) persistPicks(); // wipe any stale picks invalidated by official results
   // load per-match pick distribution (powers "X of Y" + Ivory Stats)
   if(backendOn()){
     try{ const ms=await api('matchStats',{}); MATCH_STATS=ms.stats||{}; }catch(e){}
@@ -617,19 +620,36 @@ async function loadEverything(){
    ========================================================= */
 function matchById(id){ return MATCHES.find(m=>m.id===id); }
 
-function propagateAll(){
-  // reset downstream slots then fill from picks, in round order
+function propagateSlots(){
   MATCHES.forEach(m=>{ if(m.dependsOn.length){ m.t1=null; m.t2=null; } });
   MATCHES.forEach(m=>{
-    // a team advances by the user's prediction; if the match is already decided
-    // and they had no pick (e.g. it finished before they joined), the real winner advances
-    const adv = PICKS[m.id] || RESULTS[m.id];
+    // official result wins; player pick is fallback for still-undecided matches.
+    // Only advance a pick that is actually one of this match's current teams — a
+    // stale pick (bracket reordered, or the picked team was knocked out upstream)
+    // must NOT float up into later rounds.
+    let adv = RESULTS[m.id];
+    if(adv==null){
+      const p=PICKS[m.id];
+      if(p!=null && (p===m.t1 || p===m.t2)) adv=p;
+    }
     if(adv==null) return;
     MATCHES.forEach(n=>{
       const idx=n.dependsOn.indexOf(m.id);
       if(idx===0) n.t1=adv; else if(idx===1) n.t2=adv;
     });
   });
+}
+function propagateAll(){
+  propagateSlots();
+  // wipe picks whose team is no longer a valid participant in that match
+  // (happens when an official result advanced a different team into the slot)
+  let wiped=false;
+  MATCHES.forEach(m=>{
+    const p=PICKS[m.id]; if(!p) return;
+    if(m.t1 && m.t2 && p!==m.t1 && p!==m.t2){ delete PICKS[m.id]; wiped=true; }
+  });
+  if(wiped) propagateSlots(); // re-run so downstream QF/SF slots also reflect cleared picks
+  return wiped;
 }
 
 function clearDownstream(matchId){
@@ -647,7 +667,7 @@ function pick(matchId, team){
   if(RESULTS[m.id] || kickedOff(m)){ toast('⏱️ This match has already kicked off'); return; }
   const prev=PICKS[matchId];
   if(prev===team) return;                                 // tapping the same pick = no-op
-  if(prev && withinLock(m)){ toast(`🔒 Locked — can't change within ${CONFIG.LOCK_HOURS}h of kickoff`); return; }
+  if(prev && withinLock(m)){ toast(`🔒 Locked — can't change within 30 min of kickoff`); return; }
   PICKS[matchId]=team;
   if(prev) clearDownstream(matchId);                      // changed a pick → wipe now-invalid downstream
   propagateAll();
@@ -676,7 +696,7 @@ function renderBracket(){
   if(editable.length){
     banner.style.display='flex';
     document.getElementById('editBannerText').textContent =
-      `${editable.length} match${editable.length>1?'es':''} open to predict. Picks can't be changed within ${CONFIG.LOCK_HOURS}h of kickoff.`;
+      `${editable.length} match${editable.length>1?'es':''} open to predict. Picks can't be changed within 30 min of kickoff.`;
   } else banner.style.display='none';
 
   ROUND_ORDER.forEach(rn=>{
